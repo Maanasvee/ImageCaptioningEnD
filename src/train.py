@@ -60,12 +60,15 @@ if __name__ == "__main__":
     print(f"Using device: {DEVICE}")
 
     # Load data
-    with open("../data/vocab.pkl",          "rb") as f: vocab          = pickle.load(f)
-    with open("../data/image_captions.pkl", "rb") as f: image_captions = pickle.load(f)
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    data_dir = os.path.join(BASE_DIR, "data")
+    
+    with open(os.path.join(data_dir, "vocab.pkl"),          "rb") as f: vocab          = pickle.load(f)
+    with open(os.path.join(data_dir, "image_captions.pkl"), "rb") as f: image_captions = pickle.load(f)
 
     # Find images folder
     img_dir = None
-    for root, dirs, files in os.walk("../data"):
+    for root, dirs, files in os.walk(data_dir):
         for d in dirs:
             if "image" in d.lower() or "img" in d.lower():
                 img_dir = os.path.join(root, d)
@@ -97,7 +100,9 @@ if __name__ == "__main__":
     print(f"Trainable parameters: {total_params:,}")
 
     best_val = float("inf")
-    os.makedirs("../checkpoints", exist_ok=True)
+    os.makedirs(os.path.join(BASE_DIR, "checkpoints"), exist_ok=True)
+    # and in the save line:
+    torch.save({...}, os.path.join(BASE_DIR, "checkpoints", "best_caption_model.pt"))
 
     for epoch in range(1, N_EPOCHS+1):
         # Train

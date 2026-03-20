@@ -68,15 +68,19 @@ val_transform = transforms.Compose([
 ])
 
 if __name__ == "__main__":
+    # Works from ANY directory
+    BASE_DIR    = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    data_dir    = os.path.join(BASE_DIR, "data")
+    
     # Find caption file
     caption_file = None
-    for root, dirs, files in os.walk("../data"):
+    for root, dirs, files in os.walk(data_dir):
         for f in files:
             if "caption" in f.lower() and f.endswith(".txt"):
                 caption_file = os.path.join(root, f)
                 break
 
-    assert caption_file, "Caption file not found in data/"
+    assert caption_file, f"Caption file not found in {data_dir}"
     print(f"Found captions: {caption_file}")
 
     image_captions = load_captions(caption_file)
@@ -88,7 +92,6 @@ if __name__ == "__main__":
     vocab = build_vocab(all_captions)
     print(f"Vocab size: {len(vocab)}")
 
-    # Save
-    with open("../data/vocab.pkl",           "wb") as f: pickle.dump(vocab,           f)
-    with open("../data/image_captions.pkl",  "wb") as f: pickle.dump(image_captions,  f)
+    with open(os.path.join(data_dir, "vocab.pkl"),          "wb") as f: pickle.dump(vocab,          f)
+    with open(os.path.join(data_dir, "image_captions.pkl"), "wb") as f: pickle.dump(image_captions, f)
     print("Saved vocab.pkl and image_captions.pkl")
