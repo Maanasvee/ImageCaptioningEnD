@@ -13,15 +13,15 @@ from preprocess import encode_caption, train_transform, val_transform
 # ══════════════════════════════════════════════════════════════════
 # HYPERPARAMETERS
 # ══════════════════════════════════════════════════════════════════
-EMBED_DIM  = 256   # CNN output + word embedding dimension
-HIDDEN_DIM = 512   # LSTM hidden state size
-NUM_LAYERS = 1     # LSTM layers
-DROPOUT    = 0.3   # Dropout rate
-BATCH_SIZE = 32    # Images per batch
-N_EPOCHS   = 10    # Training epochs
-LR         = 3e-4  # Learning rate (Adam)
-CLIP       = 5.0   # Gradient clip
-MAX_LEN    = 30    # Max caption length
+EMBED_DIM  = 256
+HIDDEN_DIM = 512
+NUM_LAYERS = 1
+DROPOUT    = 0.3
+BATCH_SIZE = 32
+N_EPOCHS   = 10
+LR         = 3e-4
+CLIP       = 5.0
+MAX_LEN    = 30
 DEVICE     = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class Flickr8kDataset(Dataset):
@@ -59,14 +59,17 @@ if __name__ == "__main__":
     gc.collect()
     print(f"Using device: {DEVICE}")
 
-    # Load data
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    data_dir = os.path.join(BASE_DIR, "data")
-    
+    # ── Absolute paths ─────────────────────────────────────────────
+    BASE_DIR  = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    data_dir  = os.path.join(BASE_DIR, "data")
+    ckpt_dir  = os.path.join(BASE_DIR, "checkpoints")
+    os.makedirs(ckpt_dir, exist_ok=True)
+
+    # ── Load data ──────────────────────────────────────────────────
     with open(os.path.join(data_dir, "vocab.pkl"),          "rb") as f: vocab          = pickle.load(f)
     with open(os.path.join(data_dir, "image_captions.pkl"), "rb") as f: image_captions = pickle.load(f)
 
-    # Find images folder
+    # ── Find images folder ─────────────────────────────────────────
     img_dir = None
     for root, dirs, files in os.walk(data_dir):
         for d in dirs:
@@ -78,10 +81,10 @@ if __name__ == "__main__":
     print(f"Images folder: {img_dir}")
     print(f"Vocab size: {len(vocab)}")
 
-    # Split data
-    all_imgs = list(image_captions.keys())
+    # ── Split data ─────────────────────────────────────────────────
+    all_imgs   = list(image_captions.keys())
     random.shuffle(all_imgs)
-    split     = int(0.9 * len(all_imgs))
+    split      = int(0.9 * len(all_imgs))
     train_imgs = {k: image_captions[k] for k in all_imgs[:split]}
     val_imgs   = {k: image_captions[k] for k in all_imgs[split:]}
 
@@ -90,7 +93,7 @@ if __name__ == "__main__":
     train_dl = DataLoader(train_ds, BATCH_SIZE, shuffle=True,  collate_fn=collate_fn, num_workers=2)
     val_dl   = DataLoader(val_ds,   BATCH_SIZE, shuffle=False, collate_fn=collate_fn, num_workers=2)
 
-    # Build model
+    # ── Build model ────────────────────────────────────────────────
     model     = ImageCaptioningModel(EMBED_DIM, HIDDEN_DIM, len(vocab), NUM_LAYERS, DROPOUT).to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=2, factor=0.5)
@@ -99,10 +102,8 @@ if __name__ == "__main__":
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"Trainable parameters: {total_params:,}")
 
-    best_val = float("inf")
-    os.makedirs(os.path.join(BASE_DIR, "checkpoints"), exist_ok=True)
-    # and in the save line:
-    torch.save({...}, os.path.join(BASE_DIR, "checkpoints", "best_caption_model.pt"))
+    best_val  = float("inf")
+    ckpt_path = os.path.join(ckpt_dir, "best_caption_model.pt")
 
     for epoch in range(1, N_EPOCHS+1):
         # Train
@@ -150,7 +151,7 @@ if __name__ == "__main__":
                 "hidden_dim"  : HIDDEN_DIM,
                 "num_layers"  : NUM_LAYERS,
                 "dropout"     : DROPOUT,
-            }, "../checkpoints/best_caption_model.pt")
-            print(f"  ✓ Saved (val: {best_val:.4f})")
+            }, ckpt_path)
+            print(f"Saved (val: {best_val:.4f})")
 
     print("Training complete!")
